@@ -12,6 +12,7 @@ outputs/
 screenshots/
 APK/
 *.apk
+！APK/ADBkeyboard.apk
 # logs
 *.log
 

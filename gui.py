@@ -246,64 +246,32 @@ def run_agent(task_select, custom_task, seed,device_id):
                 server_url=SERVER_URL
             )
 
-        except requests.exceptions.HTTPError as e:
-            error_msg = str(e)
+        except Exception as e:
+            error_text = str(e)
 
             try:
-                # 尝试解析接口返回JSON
-                response = e.response
+                error_json = json.loads(error_text)
+            except:
+                error_json = {"error": error_text}
 
-                if response is not None:
-                    error_json = response.json()
-
-                    error_text = json.dumps(
-                        error_json,
-                        ensure_ascii=False,
-                        indent=2
-                    )
-
-                else:
-                    error_text = error_msg
-
-            except Exception:
-                error_text = error_msg
-
-            print("模型请求失败:")
-            print(error_text)
-            yield (
-                f"模型请求失败:\n{error_text}",
-                {
-                    "error": error_text
-                },
-                final_visualize
-            )
-
-            return
-        except Exception as e:
-
-            error_text = str(e)
-            print("未知错误:")
-            print(error_text)
+            print("模型请求失败:", error_json)
 
             yield (
-                f"未知错误:\n{error_text}",
-                {
-                    "error": error_text
-                },
+                "模型请求失败:\n" + json.dumps(error_json, ensure_ascii=False, indent=2),
+                error_json,
                 final_visualize
             )
 
             return
         # print(result)
-        print(result["action"])
+        if "action" not in result:
+            raise RuntimeError(f"模型返回错误:{result}")
         yield (
             f"Step {step}: 推理完成",
             result,
             final_visualize
         )
-        if "action" not in result:
-            raise RuntimeError(f"模型返回错误:{result}")
-
+        print(result["action"])
         raw_action = result["action"]
 
         # 兼容action格式

@@ -29,27 +29,30 @@ def infer(
         "config": config
     }
 
-    response = requests.post(
-        server_url,
-        json=payload,
-        timeout=300
-    )
+    try:
+        response = requests.post(
+            server_url,
+            json=payload,
+            timeout=300
+        )
+    except requests.exceptions.ConnectionError:
+        raise RuntimeError(f"服务器连接失败: {server_url}")
+    except requests.exceptions.Timeout:
+        raise RuntimeError("服务器请求超时")
 
     try:
         data = response.json()
     except Exception:
         data = {
-            "error": response.text
+            "error": response.text or f"HTTP {response.status_code} 无响应内容"
         }
 
-
     if response.status_code != 200:
-        raise requests.exceptions.HTTPError(
+        raise RuntimeError(
             json.dumps(
                 data,
                 ensure_ascii=False
-            ),
-            response=response
+            )
         )
 
 
