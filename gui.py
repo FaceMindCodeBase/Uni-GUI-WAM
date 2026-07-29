@@ -52,7 +52,7 @@ TASK_LIST = [
 SERVER_URL="http://36.213.164.160:8302/api/plan"
 ADB_SERVER="http://127.0.0.1:5000"
 ADB_PROCESS = None
-
+STOP_FLAG = False
 def start_adb_server():
     global ADB_PROCESS
     if ADB_PROCESS is not None:
@@ -188,7 +188,16 @@ def auto_select_device():
         "检测到多个设备，请手动选择"
     )
 
+def stop_agent():
+    global STOP_FLAG
+
+    STOP_FLAG = True
+
+    return "停止任务中..."
+
 def run_agent(task_select, custom_task, seed,device_id):
+    global STOP_FLAG
+    STOP_FLAG = False
     task = custom_task.strip()
     if not task:
         raise gr.Error("任务不能为空")
@@ -224,6 +233,14 @@ def run_agent(task_select, custom_task, seed,device_id):
         final_visualize
     )
     for step in range(1, MAX_STEP + 1):
+        if STOP_FLAG:
+            yield (
+                "任务已停止",
+                {},
+                final_visualize
+            )
+            return
+        
         print(f"STEP {step}:",end=" ")
 
         step_before = current_image
@@ -325,6 +342,13 @@ def run_agent(task_select, custom_task, seed,device_id):
             action,
             final_visualize
         )
+        if STOP_FLAG:
+            yield (
+                "任务已停止",
+                {},
+                final_visualize
+            )
+            return
         execute_result = adb.execute(action)
         history_item["result"] = execute_result
         action_history.append(history_item)
@@ -375,7 +399,7 @@ atexit.register(
 )
 
 with gr.Blocks() as demo:
-    gr.Markdown("# FM GUI Client")
+    gr.Markdown("# UNI GUI Client")
 
     # Task
     with gr.Row():
@@ -429,6 +453,9 @@ with gr.Blocks() as demo:
         "执行",
         variant="primary"
     )
+    stop_btn = gr.Button(
+        "停止任务"
+    )   
 
 
     with gr.Row():
@@ -472,6 +499,10 @@ with gr.Blocks() as demo:
             action_output,
             image_output
         ]
+    )
+    stop_btn.click(
+        fn=stop_agent,
+        outputs=status_output
     )
     demo.load(
         fn=auto_select_device,
