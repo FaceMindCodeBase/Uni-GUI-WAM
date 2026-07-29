@@ -1,3 +1,4 @@
+import json
 import requests
 import base64
 from pathlib import Path
@@ -34,9 +35,22 @@ def infer(
         timeout=300
     )
 
+    try:
+        data = response.json()
+    except Exception:
+        data = {
+            "error": response.text
+        }
+
+
     if response.status_code != 200:
-        print(response.text)
+        raise requests.exceptions.HTTPError(
+            json.dumps(
+                data,
+                ensure_ascii=False
+            ),
+            response=response
+        )
 
-    response.raise_for_status()
 
-    return response.json()
+    return data

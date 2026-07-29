@@ -234,17 +234,67 @@ def run_agent(task_select, custom_task, seed,device_id):
             {},
             final_visualize
         )
-        result = infer(
-            image_path=str(step_before),
-            task=task,
-            task_id=task_id,
-            step=step,
-            action_history=action_history,
-            plan=plan,
-            config=config,
-            server_url=SERVER_URL
-        )
+        try:
+            result = infer(
+                image_path=str(step_before),
+                task=task,
+                task_id=task_id,
+                step=step,
+                action_history=action_history,
+                plan=plan,
+                config=config,
+                server_url=SERVER_URL
+            )
 
+        except requests.exceptions.HTTPError as e:
+            error_msg = str(e)
+
+            try:
+                # 尝试解析接口返回JSON
+                response = e.response
+
+                if response is not None:
+                    error_json = response.json()
+
+                    error_text = json.dumps(
+                        error_json,
+                        ensure_ascii=False,
+                        indent=2
+                    )
+
+                else:
+                    error_text = error_msg
+
+            except Exception:
+                error_text = error_msg
+
+            print("模型请求失败:")
+            print(error_text)
+            yield (
+                f"模型请求失败:\n{error_text}",
+                {
+                    "error": error_text
+                },
+                final_visualize
+            )
+
+            return
+        except Exception as e:
+
+            error_text = str(e)
+            print("未知错误:")
+            print(error_text)
+
+            yield (
+                f"未知错误:\n{error_text}",
+                {
+                    "error": error_text
+                },
+                final_visualize
+            )
+
+            return
+        # print(result)
         print(result["action"])
         yield (
             f"Step {step}: 推理完成",
